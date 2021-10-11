@@ -1,0 +1,15 @@
+name: Shortcut PR Title
+description: Create an iteration on Shortcut
+branding:
+  icon: copy
+  color: yellow
+inputs:
+  shortcutToken:
+    description: Shortcut API auth token
+    required: true
+  ghToken:
+    description: GitHub API auth name
+    required: true
+runs:
+  using: "node12"
+  main: "index.js"
