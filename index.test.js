@@ -7,7 +7,9 @@ test("extracts Shortcut story ID from the PR's branch name when formatted as [st
     },
   };
 
-  expect(index.getShortcutStoryIdFromPullRequest(pullRequest)).toEqual("123");
+  expect(index.getShortcutStoryIdsFromPullRequest(pullRequest)).toEqual([
+    "123",
+  ]);
 });
 
 test("extracts Shortcut story ID from the PR's branch name when formatted as [name]/[story_id]/[name2]", () => {
@@ -17,7 +19,9 @@ test("extracts Shortcut story ID from the PR's branch name when formatted as [na
     },
   };
 
-  expect(index.getShortcutStoryIdFromPullRequest(pullRequest)).toEqual("123");
+  expect(index.getShortcutStoryIdsFromPullRequest(pullRequest)).toEqual([
+    "123",
+  ]);
 });
 
 test("extracts Shortcut story ID from the PR's body", () => {
@@ -28,7 +32,24 @@ test("extracts Shortcut story ID from the PR's body", () => {
     body: "Lorem ipsum\ndolor sit [sc-123], consectetur adipiscing elit.",
   };
 
-  expect(index.getShortcutStoryIdFromPullRequest(pullRequest)).toEqual("123");
+  expect(index.getShortcutStoryIdsFromPullRequest(pullRequest)).toEqual([
+    "123",
+  ]);
+});
+
+test("extracts Shortcut story ID from the PR's branch and body", () => {
+  const pullRequest = {
+    head: {
+      ref: "foo/sc-123/bar",
+    },
+    body: "Lorem ipsum\ndolor sit [sc-345], consectetur adipiscing elit [sc-678].",
+  };
+
+  expect(index.getShortcutStoryIdsFromPullRequest(pullRequest)).toEqual([
+    "123",
+    "345",
+    "678",
+  ]);
 });
 
 test("returns null if the PR's branch name and body don't contain a Shortcut story ID", () => {
@@ -39,5 +60,5 @@ test("returns null if the PR's branch name and body don't contain a Shortcut sto
     body: "Lorem ipsum\ndolor sit, consectetur adipiscing elit.",
   };
 
-  expect(index.getShortcutStoryIdFromPullRequest(pullRequest)).toEqual(null);
+  expect(index.getShortcutStoryIdsFromPullRequest(pullRequest)).toEqual([]);
 });

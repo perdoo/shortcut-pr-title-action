@@ -4,18 +4,25 @@ const { ShortcutClient } = require("@useshortcut/client");
 
 const PR_TITLE_UPDATE_KEYWORD = "sc";
 
-function getShortcutStoryIdFromPullRequest(pullRequest) {
+function getShortcutStoryIdsFromPullRequest(pullRequest) {
+  const storyIds = [];
   const branchName = pullRequest.head.ref;
   const branchStoryId = branchName.match(/^sc-(\d+)\/|\/sc-(\d+)\//);
 
   if (branchStoryId) {
-    return branchStoryId[1] ? branchStoryId[1] : branchStoryId[2];
+    storyIds.push(branchStoryId[1] ? branchStoryId[1] : branchStoryId[2]);
   }
 
   const body = pullRequest.body != null ? pullRequest.body : "";
-  const bodyStoryId = body.match(/\[sc-(\d+)\]/);
+  const bodyRegex = /\[sc-(\d+)\]/g;
+  let match = bodyRegex.exec(body);
 
-  return bodyStoryId ? bodyStoryId[1] : null;
+  while (match != null) {
+    storyIds.push(match[1]);
+    match = bodyRegex.exec(body);
+  }
+
+  return storyIds;
 }
 
 async function getShortcutStory(shortcutClient, storyId) {
@@ -39,20 +46,65 @@ async function getTitle(shortcutClient, shortcutStoryId) {
   return epic ? `${epic.name} | ${story.name}` : story.name;
 }
 
-async function updatePrTitle(shortcutClient, octokit, pullRequest) {
-  const storyId = getShortcutStoryIdFromPullRequest(pullRequest);
+async function getBody(shortcutClient, pullRequest, shortcutStoryIds) {
+  let body = pullRequest.body;
+  let previousStoryUrl = null;
 
-  if (!storyId) {
-    core.info(`PR isn't linked to a Shortcut story.`);
-    return;
+  for (const storyId of shortcutStoryIds) {
+    const { app_url: appUrl, name } = await getShortcutStory(
+      shortcutClient,
+      storyId
+    );
+
+    if (!body.includes(appUrl)) {
+      const markdownUrl = `Shortcut: [${name}](${appUrl})`;
+
+      if (previousStoryUrl) {
+        body = body.replace(
+          `](${previousStoryUrl})`,
+          `](${previousStoryUrl})\n${markdownUrl}`
+        );
+      } else {
+        body = `${markdownUrl}\n${body}`;
+      }
+    }
+
+    previousStoryUrl = appUrl;
   }
 
-  await octokit.rest.pulls.update({
+  if (pullRequest.body == body) {
+    core.info("No changes were made to the PR's body.");
+  }
+
+  return body;
+}
+
+async function updatePrTitleAndBody(shortcutClient, octokit, pullRequest) {
+  const shortcutStoryIds = getShortcutStoryIdsFromPullRequest(pullRequest);
+
+  if (!shortcutStoryIds.length) {
+    core.info("PR isn't linked to any Shortcut story.");
+    return;
+  } else {
+    core.info(`PR linked to Shortcut stories ${shortcutStoryIds.join(", ")}.`);
+  }
+
+  const data = {
     repo: pullRequest.head.repo.name,
     owner: pullRequest.head.repo.owner.login,
     pull_number: pullRequest.number,
-    title: await getTitle(shortcutClient, storyId),
-  });
+    body: await getBody(shortcutClient, pullRequest, shortcutStoryIds),
+  };
+
+  if (pullRequest.title == PR_TITLE_UPDATE_KEYWORD) {
+    data.title = await getTitle(shortcutClient, shortcutStoryIds[0]);
+  } else {
+    core.info(
+      `PR title isn't set to keyword '${PR_TITLE_UPDATE_KEYWORD}'. Skipping title update.`
+    );
+  }
+
+  await octokit.rest.pulls.update(data);
 }
 
 async function run() {
@@ -71,14 +123,7 @@ async function run() {
     core.setSecret("shortcutToken");
     core.setSecret("ghToken");
 
-    if (pullRequest.title !== PR_TITLE_UPDATE_KEYWORD) {
-      core.info(
-        `PR title isn't set to keyword '${PR_TITLE_UPDATE_KEYWORD}'. Skipping update.`
-      );
-      return;
-    }
-
-    await updatePrTitle(shortcutClient, octokit, pullRequest);
+    await updatePrTitleAndBody(shortcutClient, octokit, pullRequest);
   } catch (error) {
     core.setFailed(error.message);
   }
@@ -88,4 +133,4 @@ if (process.env.GITHUB_ACTIONS) {
   run();
 }
 
-exports.getShortcutStoryIdFromPullRequest = getShortcutStoryIdFromPullRequest;
+exports.getShortcutStoryIdsFromPullRequest = getShortcutStoryIdsFromPullRequest;
