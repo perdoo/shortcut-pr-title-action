@@ -1,6 +1,6 @@
 # Shortcut PR Title Action
 
-Update your PR's title to the linked Shortcut story's title.
+Update your PR's title to the linked Shortcut story's title and add a link to the story in the PR's body.
 
 To trigger the update, set your PRs title to `sc`.
 
