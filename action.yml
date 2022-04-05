@@ -1,5 +1,5 @@
 name: Shortcut PR Title
-description: Create an iteration on Shortcut
+description: Update your PR's title to the linked Shortcut story's title and add a link to the story in the PR's body
 branding:
   icon: copy
   color: yellow
