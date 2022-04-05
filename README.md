@@ -17,7 +17,7 @@ _Required._ GitHub API auth token.
 ## Example usage
 
 ```yaml
-uses: perdoo/shortcut-pr-title-action@v1.0.1
+uses: perdoo/shortcut-pr-title-action@v2.0.0
 with:
   shortcutToken: ${{ secrets.SHORTCUT_TOKEN }}
   ghToken: ${{ secrets.GITHUB_TOKEN }}
